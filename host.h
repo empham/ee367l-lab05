@@ -24,6 +24,7 @@ struct host_job {
 	char fname_upload[100];
 	int ping_timer;
 	int file_upload_dst;
+	int file_download_dst;
 	struct host_job *next;
 };
 
