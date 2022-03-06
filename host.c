@@ -536,6 +536,11 @@ while(1) {
 					dir, new_job->fname_upload);
 				name[n] = '\0';
 				fp = fopen(name, "r");
+            fseek(fp,0L,SEEK_END);//Bring fp to end of file
+
+            int len = ftell(fp);//Will return the total  bytes
+            rewind(fp);// bring fp back to the beginning
+
 				if (fp != NULL) {
 
 				        /* 
@@ -571,39 +576,41 @@ while(1) {
 					 * Create the second packet which
 					 * has the file contents
 					 */
-					new_packet = (struct packet *) 
-						malloc(sizeof(struct packet));
-					new_packet->dst 
-						= new_job->file_upload_dst;
-					new_packet->src = (char) host_id;
-					new_packet->type = PKT_FILE_UPLOAD_END;
+               while(len>0){
+                  len -= PKT_PAYLOAD_MAX;
+                  new_packet = (struct packet *) 
+                     malloc(sizeof(struct packet));
+                  new_packet->dst 
+                     = new_job->file_upload_dst;
+                  new_packet->src = (char) host_id;
+                  new_packet->type = PKT_FILE_UPLOAD_END;
 
 
-					n = fread(string,sizeof(char),
-						PKT_PAYLOAD_MAX, fp);
-					fclose(fp);
-					string[n] = '\0';
+                  n = fread(string,sizeof(char),
+                     PKT_PAYLOAD_MAX, fp);
+                  string[n] = '\0';
 
-					for (i=0; i<n; i++) {
-						new_packet->payload[i] 
-							= string[i];
-					}
+                  for (i=0; i<n; i++) {
+                     new_packet->payload[i] 
+                        = string[i];
+                  }
 
-					new_packet->length = n;
+                  new_packet->length = n;
 
-					/*
-					 * Create a job to send the packet
-					 * and put the job in the job queue
-					 */
+                  /*
+                   * Create a job to send the packet
+                   * and put the job in the job queue
+                   */
 
-					new_job2 = (struct host_job *)
-						malloc(sizeof(struct host_job));
-					new_job2->type 
-						= JOB_SEND_PKT_ALL_PORTS;
-					new_job2->packet = new_packet;
-					job_q_add(&job_q, new_job2);
-
-					free(new_job);
+                  new_job2 = (struct host_job *)
+                     malloc(sizeof(struct host_job));
+                  new_job2->type 
+                     = JOB_SEND_PKT_ALL_PORTS;
+                  new_job2->packet = new_packet;
+                  job_q_add(&job_q, new_job2);
+               }
+               fclose(fp);
+               free(new_job);
 				}
 				else {  
 					/* Didn't open file */
@@ -652,7 +659,7 @@ while(1) {
 				file_buf_get_name(&f_buf_upload, string);
 				n = sprintf(name, "./%s/%s", dir, string);
 				name[n] = '\0';
-				fp = fopen(name, "w");
+				fp = fopen(name, "a+");
 
 				if (fp != NULL) {
 					/* 
@@ -689,11 +696,17 @@ while(1) {
 					dir, new_job->packet->payload);
 				name[n] = '\0';
 				fp = fopen(name, "r");
+            fseek(fp,0L,SEEK_END); //Bring fp to end of file
+
+            int len = ftell (fp); //Will return number of total bytes
+            rewind (fp); 
 				if (fp != NULL) {
 					/* 
 					 * Create the packet which
 					 * has the file contents
 					 */
+               while(len>0){
+                  len -= PKT_PAYLOAD_MAX;
 					new_packet = (struct packet *) 
 						malloc(sizeof(struct packet));
 					new_packet->dst 
@@ -704,7 +717,6 @@ while(1) {
 
 					n = fread(string,sizeof(char),
 						PKT_PAYLOAD_MAX, fp);
-					fclose(fp);
 					string[n] = '\0';
 
 					for (i=0; i<n; i++) {
@@ -725,7 +737,9 @@ while(1) {
 						= JOB_SEND_PKT_ALL_PORTS;
 					new_job2->packet = new_packet;
 					job_q_add(&job_q, new_job2);
-
+               }
+            
+               fclose(fp);
                free(new_job->packet);
 					free(new_job);
 				}
@@ -808,7 +822,7 @@ while(1) {
 				file_buf_get_name(&f_buf_download, string);
 				n = sprintf(name, "./%s/%s", dir, string);
 				name[n] = '\0';
-				fp = fopen(name, "w");
+				fp = fopen(name, "a+");
 
 				if (fp != NULL) {
 					/* 
