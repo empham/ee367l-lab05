@@ -21,3 +21,17 @@
 
 #define MAX_FT_ENTRIES 100 // maximum number of entries in a forwarding table
 
+
+void switch_main(int switch_id) {
+   /* forwarding table
+    * col [0] = valid
+    * col [1] = destination (host ID)
+    * col [2] = port #
+    */
+   int forwarding_table [3] [MAX_FT_ENTRIES];
+
+   /* initialize forwarding table */
+   for (int i=0; i < MAX_FT_ENTRIES; i++) {
+      forwarding_table[0][i] = 0;
+   }
+}
