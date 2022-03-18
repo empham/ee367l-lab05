@@ -1,7 +1,8 @@
 /* 
- * host.h 
+ * jobs.h
+ * jobs for hosts and switches
  */
-/*
+
 enum host_job_type {
 	JOB_SEND_PKT_ALL_PORTS,
 	JOB_PING_SEND_REQ,	
@@ -15,7 +16,7 @@ enum host_job_type {
 	JOB_FILE_DOWNLOAD_RECV_END
 };
 
-struct host_job {
+struct job {
 	enum host_job_type type;
 	struct packet *packet;
 	int in_port_index;
@@ -25,16 +26,17 @@ struct host_job {
 	int ping_timer;
 	int file_upload_dst;
 	int file_download_src;
-	struct host_job *next;
+	struct job *next;
 };
-
 
 struct job_queue {
-	struct host_job *head;
-	struct host_job *tail;
+	struct job *head;
+	struct job *tail;
 	int occ;
 };
-*/
-void host_main(int host_id);
 
 
+void job_q_add(struct job_queue *j_q, struct job *j);
+struct job *job_q_remove(struct job_queue *j_q);
+void job_q_init(struct job_queue *j_q);
+int job_q_num(struct job_queue *j_q);

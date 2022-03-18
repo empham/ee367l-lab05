@@ -15,6 +15,7 @@
 #include "man.h"
 #include "host.h"
 #include "packet.h"
+#include "jobs.h"
 
 #define MAX_FILE_BUFFER 1000
 #define MAX_MSG_LENGTH 100
@@ -162,50 +163,6 @@ write(port->send_fd, reply_msg, n);
 }
 
 
-
-/* Job queue operations */
-
-/* Add a job to the job queue */
-void job_q_add(struct job_queue *j_q, struct host_job *j)
-{
-if (j_q->head == NULL ) {
-	j_q->head = j;
-	j_q->tail = j;
-	j_q->occ = 1;
-}
-else {
-	(j_q->tail)->next = j;
-	j->next = NULL;
-	j_q->tail = j;
-	j_q->occ++;
-}
-}
-
-/* Remove job from the job queue, and return pointer to the job*/
-struct host_job *job_q_remove(struct job_queue *j_q)
-{
-struct host_job *j;
-
-if (j_q->occ == 0) return(NULL);
-j = j_q->head;
-j_q->head = (j_q->head)->next;
-j_q->occ--;
-return(j);
-}
-
-/* Initialize job queue */
-void job_q_init(struct job_queue *j_q)
-{
-j_q->occ = 0;
-j_q->head = NULL;
-j_q->tail = NULL;
-}
-
-int job_q_num(struct job_queue *j_q)
-{
-return j_q->occ;
-}
-
 /*
  *  Main 
  */
@@ -239,8 +196,8 @@ struct packet *in_packet; /* Incoming packet */
 struct packet *new_packet;
 
 struct net_port *p;
-struct host_job *new_job;
-struct host_job *new_job2;
+struct job *new_job;
+struct job *new_job2;
 
 struct job_queue job_q;
 
@@ -315,14 +272,14 @@ while(1) {
 				new_packet->dst = (char) dst;
 				new_packet->type = (char) PKT_PING_REQ;
 				new_packet->length = 0;
-				new_job = (struct host_job *) 
-						malloc(sizeof(struct host_job));
+				new_job = (struct job *) 
+						malloc(sizeof(struct job));
 				new_job->packet = new_packet;
 				new_job->type = JOB_SEND_PKT_ALL_PORTS;
 				job_q_add(&job_q, new_job);
 
-				new_job2 = (struct host_job *) 
-						malloc(sizeof(struct host_job));
+				new_job2 = (struct job *) 
+						malloc(sizeof(struct job));
 				ping_reply_received = 0;
 				new_job2->type = JOB_PING_WAIT_FOR_REPLY;
 				new_job2->ping_timer = 10;
@@ -332,8 +289,8 @@ while(1) {
 
 			case 'u': /* Upload a file to a host */
 				sscanf(man_msg, "%d %s", &dst, name);
-				new_job = (struct host_job *) 
-						malloc(sizeof(struct host_job));
+				new_job = (struct job *) 
+						malloc(sizeof(struct job));
 				new_job->type = JOB_FILE_UPLOAD_SEND;
 				new_job->file_upload_dst = dst;	
 				for (i=0; name[i] != '\0'; i++) {
@@ -345,8 +302,8 @@ while(1) {
 				break;
 			case 'd': /* Download a file to curr host */
 				sscanf(man_msg, "%d %s", &src, name);
-				new_job = (struct host_job *) 
-						malloc(sizeof(struct host_job));
+				new_job = (struct job *) 
+						malloc(sizeof(struct job));
 				new_job->type = JOB_FILE_DOWNLOAD_RECV_START;
 				new_job->file_download_src = src; 
 				for (i=0; name[i] != '\0'; i++) {
@@ -372,8 +329,8 @@ while(1) {
 		n = packet_recv(node_port[k], in_packet);
 
 		if ((n > 0) && ((int) in_packet->dst == host_id)) {
-			new_job = (struct host_job *) 
-				malloc(sizeof(struct host_job));
+			new_job = (struct job *) 
+				malloc(sizeof(struct job));
 			new_job->in_port_index = k;
 			new_job->packet = in_packet;
 
@@ -489,8 +446,8 @@ while(1) {
 			new_packet->length = 0;
 
 			/* Create job for the ping reply */
-			new_job2 = (struct host_job *)
-				malloc(sizeof(struct host_job));
+			new_job2 = (struct job *)
+				malloc(sizeof(struct job));
 			new_job2->type = JOB_SEND_PKT_ALL_PORTS;
 			new_job2->packet = new_packet;
 
@@ -566,8 +523,8 @@ while(1) {
 					 * Create a job to send the packet
 					 * and put it in the job queue
 					 */
-					new_job2 = (struct host_job *)
-						malloc(sizeof(struct host_job));
+					new_job2 = (struct job *)
+						malloc(sizeof(struct job));
 					new_job2->type = JOB_SEND_PKT_ALL_PORTS;
 					new_job2->packet = new_packet;
 					job_q_add(&job_q, new_job2);
@@ -602,8 +559,8 @@ while(1) {
                    * and put the job in the job queue
                    */
 
-                  new_job2 = (struct host_job *)
-                     malloc(sizeof(struct host_job));
+                  new_job2 = (struct job *)
+                     malloc(sizeof(struct job));
                   new_job2->type 
                      = JOB_SEND_PKT_ALL_PORTS;
                   new_job2->packet = new_packet;
@@ -731,8 +688,8 @@ while(1) {
 					 * and put the job in the job queue
 					 */
 
-					new_job2 = (struct host_job *)
-						malloc(sizeof(struct host_job));
+					new_job2 = (struct job *)
+						malloc(sizeof(struct job));
 					new_job2->type 
 						= JOB_SEND_PKT_ALL_PORTS;
 					new_job2->packet = new_packet;
@@ -780,8 +737,8 @@ while(1) {
 					 * Create a job to send the packet
 					 * and put it in the job queue
 					 */
-					new_job2 = (struct host_job *)
-						malloc(sizeof(struct host_job));
+					new_job2 = (struct job *)
+						malloc(sizeof(struct job));
 					new_job2->type = JOB_SEND_PKT_ALL_PORTS;
 					new_job2->packet = new_packet;
 			      job_q_add(&job_q, new_job2);
