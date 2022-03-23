@@ -13,7 +13,7 @@ struct FT_entry {
    int port;
 };
 
-void fwd_table_add();
+void fwd_table_add(struct FT_entry fwd_table[], int dst, int port_index);
 
 void switch_main(int switch_id);
 

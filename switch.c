@@ -30,8 +30,26 @@
 
 
 /* Forwarding table operations */
-void fwd_table_add() {
-   printf("unfinished method\n");
+void fwd_table_add(struct FT_entry fwd_table[], int dst, int port_index) {
+   if (port_index > MAX_FT_ENTRIES) 
+      printf("DEBUG: fwd_table_add(): Port index out of bounds!\n");
+   else
+      printf("DEBUG: fwd_table_add(): Port index = %d\n", port_index);
+
+   struct FT_entry new_entry = fwd_table[port_index];
+   
+   new_entry.valid = 1;
+   new_entry.dst   = dst;
+   new_entry.port  = port_index;
+
+/*
+   struct FT_entry* new_entry = (struct FT_entry*) malloc(sizeof(struct FT_entry));
+   
+   new_entry->valid = 1;
+   new_entry->dst   = dst;
+   new_entry->port  = port_index;
+   fwd_table[port_index] = new_entry;
+*/
 }
 
 /*
@@ -103,7 +121,8 @@ void switch_main(int switch_id) {
 			in_packet = (struct packet *) malloc(sizeof(struct packet));
 			n = packet_recv(node_port[k], in_packet);
 
-			if ((n > 0) && ((int) in_packet->dst == switch_id)) {
+			if (n > 0) {
+            printf( "DEBUG: switch recieved packet!\n");
 				new_job = (struct job *) 
 					malloc(sizeof(struct job));
 				new_job->in_port_index = k;
@@ -133,22 +152,36 @@ void switch_main(int switch_id) {
          /* check if entry for src exists in forwarding table */
          found = FALSE;
          for (i=0; i < MAX_FT_ENTRIES; i++) {
-            if ( (fwd_table[i].dst == src) && (fwd_table[i].valid == 1) )
+            if ( (fwd_table[i].dst == src) && (fwd_table[i].valid == 1) ) {
                found == TRUE;
+               break;
+            }
          }
          if (found == FALSE) {
-            fwd_table_add();
+            fwd_table_add(fwd_table, src, new_job->in_port_index);
          }
 
          /* check if entry for dst exists in forwarding table */
-
-
-			/* Send packets on all ports except src port*/	
+         found = FALSE;
+         for (i=0; i < MAX_FT_ENTRIES; i++) {
+            if ( (fwd_table[i].dst == dst) && (fwd_table[i].valid == 1) ) {
+               found == TRUE;
+               break;
+            }
+         }
+         /* if found, forward packet to specified port */
+         if (found == TRUE) {
+            packet_send(node_port[i], new_job->packet);
+         }
+			/* otherwise, send packets on all ports except src port*/	
+         else {
 				for (k=0; k<node_port_num; k++) {
-					packet_send(node_port[k], new_job->packet);
+               if (k != new_job->in_port_index)
+					   packet_send(node_port[k], new_job->packet);
 				}
 				free(new_job->packet);
 				free(new_job);
+         }
       }
 	   
       /* The switch goes to sleep for 10 ms */
