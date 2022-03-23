@@ -30,26 +30,26 @@
 
 
 /* Forwarding table operations */
-void fwd_table_add(struct FT_entry fwd_table[], int dst, int port_index) {
+void fwd_table_add(struct FT_entry ** fwd_table, int dst, int port_index) {
    if (port_index > MAX_FT_ENTRIES) 
       printf("DEBUG: fwd_table_add(): Port index out of bounds!\n");
    else
-      printf("DEBUG: fwd_table_add(): Port index = %d\n", port_index);
-
+      printf("DEBUG: fwd_table_add(): dst = %d, Port index = %d\n", dst, port_index);
+/*
    struct FT_entry new_entry = fwd_table[port_index];
    
    new_entry.valid = 1;
    new_entry.dst   = dst;
    new_entry.port  = port_index;
+*/
 
-/*
    struct FT_entry* new_entry = (struct FT_entry*) malloc(sizeof(struct FT_entry));
    
    new_entry->valid = 1;
    new_entry->dst   = dst;
    new_entry->port  = port_index;
    fwd_table[port_index] = new_entry;
-*/
+
 }
 
 /*
@@ -78,12 +78,13 @@ void switch_main(int switch_id) {
    struct job_queue job_q;
 
    /* forwarding table */
-   struct FT_entry fwd_table [MAX_FT_ENTRIES];
+   struct FT_entry* fwd_table [MAX_FT_ENTRIES];
    enum bool found = FALSE;
 
    /* initialize forwarding table */
    for (int i=0; i < MAX_FT_ENTRIES; i++) {
-      fwd_table[i].valid = 0;
+      //fwd_table[i]->valid = 0;
+      fwd_table[i] = NULL;
    }
 
 /*
@@ -127,7 +128,6 @@ void switch_main(int switch_id) {
 					malloc(sizeof(struct job));
 				new_job->in_port_index = k;
 				new_job->packet = in_packet;
-            // new_job->type = JOB_PING_SEND_REPLY; @note not sure if I'm gonna use job types
 				
             job_q_add(&job_q, new_job);
          }
@@ -151,21 +151,34 @@ void switch_main(int switch_id) {
 
          /* check if entry for src exists in forwarding table */
          found = FALSE;
+         //printf("DEBUG: switch.c, execute job: src = %d, dst = %d, fwd_table[in_port_index]->dst = %d\n",
+         //         src, dst, fwd_table[new_job->in_port_index]->dst);
          for (i=0; i < MAX_FT_ENTRIES; i++) {
-            if ( (fwd_table[i].dst == src) && (fwd_table[i].valid == 1) ) {
-               found == TRUE;
+            if (fwd_table[i] == NULL)
+               continue;
+
+            else if ( (fwd_table[i]->dst == src) && (fwd_table[i]->valid == 1) ) {
+               printf("DEBUG: switch.c, execute job: fwd_table entry found!\n");
+               found = TRUE;
                break;
             }
          }
+         printf("DEBUG: switch.c, execute job: found = %d\n", found);
          if (found == FALSE) {
+            printf("DEBUG: switch.c, execute job: src = %d, dst = %d, in_port_index = %d\n",
+                  src, dst, new_job->in_port_index);
             fwd_table_add(fwd_table, src, new_job->in_port_index);
+            printf("DEBUG: switch.c, execute job: src = %d, dst = %d, fwd_table[in_port_index]->dst = %d\n",
+                  src, dst, fwd_table[new_job->in_port_index]->dst);
          }
 
          /* check if entry for dst exists in forwarding table */
          found = FALSE;
          for (i=0; i < MAX_FT_ENTRIES; i++) {
-            if ( (fwd_table[i].dst == dst) && (fwd_table[i].valid == 1) ) {
-               found == TRUE;
+            if (fwd_table[i] == NULL)
+               continue;
+            else if ( (fwd_table[i]->dst == dst) && (fwd_table[i]->valid == 1) ) {
+               found = TRUE;
                break;
             }
          }
