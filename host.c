@@ -301,23 +301,31 @@ while(1) {
 					
 				break;
 			case 'd': /* Download a file to curr host */
-				sscanf(man_msg, "%d %s", &src, name);
-				new_job = (struct job *) 
-						malloc(sizeof(struct job));
-				new_job->type = JOB_FILE_DOWNLOAD_RECV_START;
-				new_job->file_download_src = src; 
-				for (i=0; name[i] != '\0'; i++) {
-					new_job->fname_download[i] = name[i];
+	      	sscanf(man_msg, "%d %s", &dst, name);
+				/*create packet*/
+				new_packet = (struct packet *)
+					malloc(sizeof(struct packet));
+				for(i=0; name[i] !='\0'; ++i){
+					new_packet->payload[i] = name[i];
 				}
-				new_job->fname_download[i] = '\0';
+				new_packet->length = i;
+				new_packet->src = (char) host_id;
+				new_packet->dst = (char) dst;
+				new_packet->type = (char) PKT_FILE_DOWNLOAD_REQ;
+
+				//Create job to send packet
+				new_job = (struct job *)
+					malloc(sizeof(struct job));
+				new_job->type = JOB_SEND_PKT_ALL_PORTS;
+				new_job->file_download_src = dst;
+				new_job->packet = new_packet;
 				job_q_add(&job_q, new_job);
-				printf("DEBUG: case d: fname_download = %s\n", new_job->fname_download);	
+
 				break;
 			default:
 			;
 		}
 	}
-	
 	/*
 	 * Get packets from incoming links and translate to jobs
   	 * Put jobs in job queue
@@ -390,10 +398,19 @@ while(1) {
 				 * which carries the content of the file
 				 * in its payload
 				 */
-		
+		      case (char) PKT_FILE_DOWNLOAD_REQ:
+               new_job->type = JOB_FILE_DOWNLOAD_SEND;
+               for(i=0; i < in_packet->length; ++i){
+						new_job->fname_download[i] = in_packet->payload[i];}
+					new_job->fname_download[i] = '\0';
+					new_job->file_download_src = in_packet->src;
+					job_q_add(&job_q, new_job);
+					free(in_packet);
+					break;
+
 				case (char) PKT_FILE_DOWNLOAD_START:
 					new_job->type 
-						= JOB_FILE_DOWNLOAD_SEND;
+						= JOB_FILE_DOWNLOAD_RECV_START;
 					job_q_add(&job_q, new_job);
 					break;
 
@@ -492,7 +509,7 @@ while(1) {
 			/* This job is for the sending host */
 		case JOB_FILE_UPLOAD_SEND:
 
-			/* Open file */
+      /* Open file */
 			if (dir_valid == 1) {
 				n = sprintf(name, "./%s/%s", 
 					dir, new_job->fname_upload);
@@ -650,82 +667,98 @@ while(1) {
          /* The next three jobs deal with downloading a file */
 
 			/* This job is for the sending host */
+
+      case JOB_FILE_DOWNLOAD_REQ: 
+
 		case JOB_FILE_DOWNLOAD_SEND:
-				
-         printf("DEBUG: JOB_FILE_DOWNLOAD_SEND: middle job send file contents\n");	
-         printf("DEBUG: JOB_FILE_DOWNLOAD_SEND: dir_valid = %d\n", dir_valid);	
-         printf("DEBUG: JOB_FILE_DOWNLOAD_SEND: payload = %s\n", new_job->packet->payload);	
-         int add_point = new_job->packet->length;
-         new_job->packet->payload[add_point] = '\0';
-
-			/* Open file */
+         /* Open file */
 			if (dir_valid == 1) {
-				n = sprintf(name, "./%s/%s", 
-					dir, new_job->packet->payload);
+				n = sprintf(name, "./%s/%s",
+					dir, new_job->fname_download);
 				name[n] = '\0';
-            printf("DEBUG: JOB_FILE_DOWNLOAD_SEND: name = %s\n", name);	
 				fp = fopen(name, "r");
-            fseek(fp,0L,SEEK_END); //Bring fp to end of file
+            fseek(fp,0L,SEEK_END);//Bring fp to end of file
 
-         printf("DEBUG: JOB_FILE_DOWNLOAD_SEND: fp = %d\n", fp);	
+            int len = ftell(fp);//Will return the total  bytes
+            rewind(fp);// bring fp back to the beginning
 
-         int len = ftell (fp); //Will return number of total bytes
-            rewind (fp); 
-         
-         printf("DEBUG: JOB_FILE_DOWNLOAD_SEND: fp = %d\n", fp);	
 				if (fp != NULL) {
-               printf("DEBUG: JOB_FILE_DOWNLOAD_SEND: opened file. filling packet...\n");	
-					/* 
-					 * Create the packet which
+
+				        /*
+					 * Create first packet which
+					 * has the file name
+					 */
+					new_packet = (struct packet *)
+						malloc(sizeof(struct packet));
+					new_packet->dst
+						= new_job->file_download_src;
+					new_packet->src = (char) host_id;
+					new_packet->type
+						= PKT_FILE_DOWNLOAD_START;
+					for (i=0;
+						new_job->fname_download[i]!= '\0';
+						i++) {
+						new_packet->payload[i] =
+							new_job->fname_download[i];
+					}
+					new_packet->length = i;
+
+					/*
+					 * Create a job to send the packet
+					 * and put it in the job queue
+					 */
+					new_job2 = (struct job *)
+						malloc(sizeof(struct job));
+					new_job2->type = JOB_SEND_PKT_ALL_PORTS;
+					new_job2->packet = new_packet;
+					job_q_add(&job_q, new_job2);
+
+					/*
+					 * Create the second packet which
 					 * has the file contents
 					 */
                while(len>0){
                   len -= PKT_PAYLOAD_MAX;
-					new_packet = (struct packet *) 
-						malloc(sizeof(struct packet));
-					new_packet->dst 
-						= new_job->packet->src;
-					new_packet->src = (char) host_id;
-					new_packet->type = PKT_FILE_DOWNLOAD_END;
+                  new_packet = (struct packet *)
+                     malloc(sizeof(struct packet));
+                  new_packet->dst
+                     = new_job->file_download_src;
+                  new_packet->src = (char) host_id;
+                  new_packet->type = PKT_FILE_DOWNLOAD_END;
 
 
-					n = fread(string,sizeof(char),
-						PKT_PAYLOAD_MAX, fp);
-					string[n] = '\0';
+                  n = fread(string,sizeof(char),
+                     PKT_PAYLOAD_MAX, fp);
+                  string[n] = '\0';
 
-					for (i=0; i<n; i++) {
-						new_packet->payload[i] 
-							= string[i];
-					}
+                  for (i=0; i<n; i++) {
+                     new_packet->payload[i]
+                        = string[i];
+                  }
 
-					new_packet->length = n;
+                  new_packet->length = n;
 
-					/*
-					 * Create a job to send the packet
-					 * and put the job in the job queue
-					 */
+                  /*
+                   * Create a job to send the packet
+                   * and put the job in the job queue
+                   */
 
-               printf("DEBUG: JOB_FILE_DOWNLOAD_SEND: sending packet...\n");	
-					
-               new_job2 = (struct job *)
-						malloc(sizeof(struct job));
-					new_job2->type 
-						= JOB_SEND_PKT_ALL_PORTS;
-					new_job2->packet = new_packet;
-					job_q_add(&job_q, new_job2);
+                  new_job2 = (struct job *)
+                     malloc(sizeof(struct job));
+                  new_job2->type
+                     = JOB_SEND_PKT_ALL_PORTS;
+                  new_job2->packet = new_packet;
+                  job_q_add(&job_q, new_job2);
                }
-            
                fclose(fp);
-               free(new_job->packet);
-					free(new_job);
+               free(new_job);
 				}
-				else {  
+				else {
 					/* Didn't open file */
 				}
 			}
-			
-         break;
-
+			break;
+				
 			/* The next two jobs are for the receving host */
 
 		case JOB_FILE_DOWNLOAD_RECV_START:
@@ -735,36 +768,6 @@ while(1) {
           * Send Download request packet with filename
           * to the sending host
           */
-				   /* 
-					 * Create first packet which
-					 * has the file name 
-					 */
-					new_packet = (struct packet *) 
-						malloc(sizeof(struct packet));
-					new_packet->dst  = new_job->file_download_src;
-					new_packet->src  = (char) host_id;
-					new_packet->type = PKT_FILE_DOWNLOAD_START;
-					for (i=0; 
-						new_job->fname_download[i]!= '\0'; 
-						i++) {
-						new_packet->payload[i] = 
-							new_job->fname_download[i];
-					}
-               new_packet->payload[i] = '\0';
-				   printf("DEBUG: JOB_FILE_DOWNLOAD_RECV_START: new_packet->payload = %s\n", new_packet->payload);	
-					new_packet->length = i;
-
-					/* 
-					 * Create a job to send the packet
-					 * and put it in the job queue
-					 */
-					new_job2 = (struct job *)
-						malloc(sizeof(struct job));
-					new_job2->type = JOB_SEND_PKT_ALL_PORTS;
-					new_job2->packet = new_packet;
-			      job_q_add(&job_q, new_job2);
-			
-         /* Initialize the file buffer data structure */
 			file_buf_init(&f_buf_download);
 
 			/* 
@@ -772,9 +775,11 @@ while(1) {
 			 * to the file buffer data structure
 			 */
 			file_buf_put_name(&f_buf_download, 
-				new_job->fname_download, 
-				strlen(new_job->fname_download));
+				new_job->packet->payload,
+            new_job->packet->length);
 
+
+         free(new_job->packet);
 			free(new_job);
 			break;
 
@@ -830,9 +835,7 @@ while(1) {
 			break;
 
       }
-
-	}
-
+   }
 
 	/* The host goes to sleep for 10 ms */
 	usleep(TENMILLISEC);
