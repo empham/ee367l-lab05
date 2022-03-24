@@ -668,7 +668,6 @@ while(1) {
 
 			/* This job is for the sending host */
 
-      case JOB_FILE_DOWNLOAD_REQ: 
 
 		case JOB_FILE_DOWNLOAD_SEND:
          /* Open file */
