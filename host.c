@@ -350,7 +350,6 @@ while(1) {
 				 * the ping request and ping reply
 				 */
 				case (char) PKT_PING_REQ:
-               printf("DEBUG: PKT_PING_REQ: host_id = %d\n", host_id);
 					new_job->type = JOB_PING_SEND_REPLY;
 					job_q_add(&job_q, new_job);
 					break;
@@ -438,17 +437,12 @@ while(1) {
 		/* Get a new job from the job queue */
 		new_job = job_q_remove(&job_q);
          
-      printf("DEBUG: Job queue: payload = %s\n", new_job->packet->payload);	
-
-
 		/* Send packet on all ports */
 		switch(new_job->type) {
 
 		/* Send packets on all ports */	
 		case JOB_SEND_PKT_ALL_PORTS:
-         printf("DEBUG: JOB_SEND_PKT_ALL_PORTS: node_port_num = %d\n", node_port_num);
 			for (k=0; k<node_port_num; k++) {
-            printf("DEBUG: JOB_SEND_PKT_ALL_PORTS: k = %d\n", node_port_num);
 				packet_send(node_port[k], new_job->packet);
 			}
 			free(new_job->packet);
@@ -784,7 +778,7 @@ while(1) {
 
 		case JOB_FILE_DOWNLOAD_RECV_END:
 
-				printf("DEBUG: JOB_FILE_DOWNLOAD_RECV_END: starting download...\n");	
+			printf("DEBUG: JOB_FILE_DOWNLOAD_RECV_END: starting download...\n");	
 			/* 
 			 * Download packet payload into file buffer 
 			 * data structure 

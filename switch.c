@@ -151,8 +151,6 @@ void switch_main(int switch_id) {
 
          /* check if entry for src exists in forwarding table */
          found = FALSE;
-         //printf("DEBUG: switch.c, execute job: src = %d, dst = %d, fwd_table[in_port_index]->dst = %d\n",
-         //         src, dst, fwd_table[new_job->in_port_index]->dst);
          for (i=0; i < MAX_FT_ENTRIES; i++) {
             if (fwd_table[i] == NULL)
                continue;
@@ -163,13 +161,8 @@ void switch_main(int switch_id) {
                break;
             }
          }
-         printf("DEBUG: switch.c, execute job: found = %d\n", found);
          if (found == FALSE) {
-            printf("DEBUG: switch.c, execute job: src = %d, dst = %d, in_port_index = %d\n",
-                  src, dst, new_job->in_port_index);
             fwd_table_add(fwd_table, src, new_job->in_port_index);
-            printf("DEBUG: switch.c, execute job: src = %d, dst = %d, fwd_table[in_port_index]->dst = %d\n",
-                  src, dst, fwd_table[new_job->in_port_index]->dst);
          }
 
          /* check if entry for dst exists in forwarding table */
