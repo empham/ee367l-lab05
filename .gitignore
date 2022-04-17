@@ -30,4 +30,5 @@
 *.x86_64
 *.hex
 net367
-
+client
+server
