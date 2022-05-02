@@ -6,13 +6,17 @@
  * contains function prototypes and macros
  */
 
-#define PORT "3523"
-#define HOSTNAME "wiliki.eng.hawaii.edu"
+//#define PORT "3523"
+//#define HOSTNAME "wiliki.eng.hawaii.edu"
 
-#define CLIENT 0
-#define SERVER 1
+#define BACKLOG 10
+#define MAXDATASIZE 100 // max num bytes we can put in a packet
 
-// creates a socket
-// RETURNS: socket address
-int createSocket( int* sockfd, struct sockaddr_in* sockAddress, int port, int type);
+/* Used by both client and server */
+
+// get sockaddr for IPv4 or IPv6
+void *get_in_addr(struct sockaddr* sa);
+
+/* used by server only */
+void sigchld_handler(int s);
 

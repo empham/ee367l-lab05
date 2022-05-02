@@ -5,42 +5,37 @@
  * header file for socket.c
  * contains function prototypes and macros
  */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
-#include <limits.h>
+#include <netdb.h>
+#include <signal.h>
 #include <netinet/in.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <errno.h>
+#include <sys/wait.h>
+#include <arpa/inet.h>
 
 #include "socket.h"
 
-int createSocket( int* sockfd, struct sockaddr_in* sockAddress, int port, int type) {
-   // create socket
-   *sockfd = socket(AF_INET, SOCK_STREAM, 0);
+void sigchld_handler(int s) 
+{
+   int saved_errno = errno;
 
-   if (type == CLIENT) {
-      // specify address for socket
-      sockAddress->sin_family = AF_INET;
-      sockAddress->sin_port = htons(port);
-      sockAddress->sin_addr.s_addr = INADDR_ANY;
-   }
-   else if (type == SERVER) {
-      // specify address for socket
-      sockAddress->sin_family = AF_INET;
-      sockAddress->sin_port = htons(port);
-      sockAddress->sin_addr.s_addr = INADDR_ANY;
+   while(waitpid(-1, NULL, WNOHANG) > 0);
 
-      //bind the socket to specified IP{ and port
-      bind(*sockfd, (struct sockaddr*) sockAddress, sizeof(*sockAddress));
-   }
-   else {
-      printf("ERROR: createSocket: unknown socket type/n");
-   }
-   return 0;
+   errno = saved_errno;
 }
+
+void *get_in_addr(struct sockaddr* sa) 
+{
+   if(sa->sa_family == AF_INET) {
+      return &(((struct sockaddr_in*)sa)->sin_addr);
+   }
+
+   return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+

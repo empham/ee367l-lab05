@@ -2,6 +2,6 @@
 #!/bin/bash
 
 make sockTest
-./server 3523 &
-./client 3523
+./server "wiliki.eng.hawaii.edu" 3523 &
+./client "wiliki.eng.hawaii.edu" 3523
 
