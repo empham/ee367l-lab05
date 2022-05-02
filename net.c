@@ -29,6 +29,7 @@
 
 
 #define MAX_FILE_NAME 100
+#define MAX_STR_LEN 50
 #define PIPE_READ 0
 #define PIPE_WRITE 1
 
@@ -43,6 +44,13 @@ struct net_link {
 	enum NetLinkType type;
 	int pipe_node0;
 	int pipe_node1;
+	
+   int sock_node;
+   char sock_Hdn  [MAX_STR_LEN];
+   char sock_Hport[MAX_STR_LEN];
+   char sock_Odn  [MAX_STR_LEN];
+   char sock_Oport[MAX_STR_LEN];
+
 };
 
 
@@ -409,6 +417,22 @@ for (i=0; i<g_net_link_num; i++) {
 		g_port_list = p0;
 
 	}
+   else if (g_net_link[i].type == SOCKET) {
+      printf("unbuit function\n\n");
+
+      node0 = g_net_link[i].pipe_node0;
+		node1 = g_net_link[i].pipe_node1;
+
+		p0 = (struct net_port *) malloc(sizeof(struct net_port));
+		p0->type = g_net_link[i].type;
+		p0->pipe_host_id = node0;
+
+		p1 = (struct net_port *) malloc(sizeof(struct net_port));
+		p1->type = g_net_link[i].type;
+		p1->pipe_host_id = node1;
+
+
+   }
 }
 
 }
@@ -492,6 +516,10 @@ else {
 int link_num;
 char link_type;
 int node0, node1;
+char host_dn   [MAX_STR_LEN];
+char host_port [MAX_STR_LEN];
+char other_dn  [MAX_STR_LEN];
+char other_port[MAX_STR_LEN];
 
 fscanf(fp, " %d ", &link_num);
 printf("Number of links = %d\n", link_num);
@@ -512,6 +540,16 @@ else {
 			g_net_link[i].pipe_node0 = node0;
 			g_net_link[i].pipe_node1 = node1;
 		}
+      else if (link_type == 'S') {
+			fscanf(fp," %d %s %s %s %s ", &node0, &host_dn, &host_port, &other_dn, &other_port );
+			g_net_link[i].type = SOCKET;
+			g_net_link[i].sock_node = node0;
+			strcpy(g_net_link[i].sock_Hdn,   host_dn);
+			strcpy(g_net_link[i].sock_Hport, host_port);
+			strcpy(g_net_link[i].sock_Odn,   other_dn);
+			strcpy(g_net_link[i].sock_Oport, other_port);
+			printf("   net.c: Built sock link\n");
+      }
 		else {
 			printf("   net.c: Unidentified link type\n");
 		}
@@ -540,6 +578,13 @@ for (i=0; i<g_net_link_num; i++) {
 				g_net_link[i].pipe_node1);
 	}
 	else if (g_net_link[i].type == SOCKET) {
+      printf("   Link %d ( %s %s, %s %s ) SOCKET\n", 
+				g_net_link[i].sock_node, 
+				g_net_link[i].sock_Hdn,
+				g_net_link[i].sock_Hport,
+				g_net_link[i].sock_Odn,
+				g_net_link[i].sock_Oport
+            );
 		printf("   Socket: to be constructed (net.c)\n");
 	}
 }
