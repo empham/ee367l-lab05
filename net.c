@@ -29,7 +29,6 @@
 
 
 #define MAX_FILE_NAME 100
-#define MAX_STR_LEN 50
 #define PIPE_READ 0
 #define PIPE_WRITE 1
 
@@ -46,10 +45,10 @@ struct net_link {
 	int pipe_node1;
 	
    int sock_node;
-   char sock_Hdn  [MAX_STR_LEN];
-   char sock_Hport[MAX_STR_LEN];
-   char sock_Odn  [MAX_STR_LEN];
-   char sock_Oport[MAX_STR_LEN];
+   char sock_Hdn  [STRING_MAX];
+   char sock_Hport[STRING_MAX];
+   char sock_Odn  [STRING_MAX];
+   char sock_Oport[STRING_MAX];
 
 };
 
@@ -516,10 +515,10 @@ else {
 int link_num;
 char link_type;
 int node0, node1;
-char host_dn   [MAX_STR_LEN];
-char host_port [MAX_STR_LEN];
-char other_dn  [MAX_STR_LEN];
-char other_port[MAX_STR_LEN];
+char host_dn   [STRING_MAX];
+char host_port [STRING_MAX];
+char other_dn  [STRING_MAX];
+char other_port[STRING_MAX];
 
 fscanf(fp, " %d ", &link_num);
 printf("Number of links = %d\n", link_num);
